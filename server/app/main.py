@@ -2,6 +2,10 @@ from crewai import Crew
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from langchain_openai import ChatOpenAI
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 #Initialize FastAPI app
 app = FastAPI(
@@ -12,7 +16,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173/"],
+    allow_origins=[os.getenv("CLIENT_URL")],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"]
