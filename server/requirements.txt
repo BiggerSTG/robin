@@ -5,3 +5,8 @@ python-dotenv==1.0.1
 Requests==2.32.3
 sympy==1.13.3
 uvicorn==0.34.0
+pypdf
+langchain
+chromadb 
+pytest
+boto3
