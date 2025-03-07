@@ -1,4 +1,7 @@
 # robin
+----THE PROJECT IS STILL IN DEVELOPMENT----
+
+
 Robin is an innovative, AI-driven e-learning platform that automatically generates adaptive, personalized curricula and transforms them into engaging video lessons. Leveraging advanced Retrieval Augmented Generation (RAG) techniques and agentic AI components, Robin aims to revolutionize digital education by dynamically tailoring learning experiences based on each user’s performance and feedback.
 
 Project Overview
