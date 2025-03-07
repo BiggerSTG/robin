@@ -7,5 +7,6 @@ sympy==1.13.3
 uvicorn==0.34.0
 pypdf
 langchain
-chromadb 
+langchain-community
+chromadb
 pytest
