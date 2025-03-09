@@ -2,6 +2,8 @@ import os
 from langchain.document_loaders import PyPDFDirectoryLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain.schema.document import Document
+from langchain.vectorstores.chroma import Chroma
+from get_embedding_function import get_embedding_function
 from pathlib import Path
 
 #Load all the documents(page-wise) into the all_documents list
@@ -31,3 +33,14 @@ def split_documents(documents: list[Document]):
     )
     return text_splitter.split_documents(documents)
 
+chunks = split_documents(documents)
+print(f"Split into {len(chunks)} Chunks.")
+print(f"Random Context: {chunks[465]}")
+
+def add_to_chroma(chunks: list[Document]):
+    CHROMA_PATH = ""
+    db = Chroma(persist_directory=CHROMA_PATH, embedding_function=get_embedding_function())
+    db.add_documents(chunks)
+    db.persist()
+
+add_to_chroma(chunks)
