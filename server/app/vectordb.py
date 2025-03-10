@@ -37,10 +37,27 @@ chunks = split_documents(documents)
 print(f"Split into {len(chunks)} Chunks.")
 print(f"Random Context: {chunks[465]}")
 
+# Function to split the list into smaller lists of size 5461
+def split_into_sublists(lst, sublist_size):
+    return [lst[i:i + sublist_size] for i in range(0, len(lst), sublist_size)]
+
+# Split the chunks list into smaller lists of size 5461
+chunk_sublists = split_into_sublists(chunks, 5000)
+print(f"Split into {len(chunk_sublists)} sublists.")
+
 def add_to_chroma(chunks: list[Document]):
-    CHROMA_PATH = ""
+    CHROMA_PATH = r"X:\robin\server\app\chroma_db"
+    # Create a new Chroma database
     db = Chroma(persist_directory=CHROMA_PATH, embedding_function=get_embedding_function())
-    db.add_documents(chunks)
+    for chunks in chunk_sublists:
+        db.add_documents(chunks)
+        print(f"Added {len(chunks)} chunks to the database.")
     db.persist()
 
 add_to_chroma(chunks)
+CHROMA_PATH = r"X:\robin\server\app\chroma_db"
+db = Chroma(persist_directory=CHROMA_PATH, embedding_function=get_embedding_function())
+print("Database loaded successfully.")
+# Example query to the database
+results = db.similarity_search("What is Algebra?", k=5)
+print("Results:", results)
