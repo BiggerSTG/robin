@@ -5,6 +5,9 @@ from langchain.schema.document import Document
 from langchain.vectorstores.chroma import Chroma
 from get_embedding_function import get_embedding_function
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 #Load all the documents(page-wise) into the all_documents list
 def load_documents():
@@ -46,7 +49,7 @@ chunk_sublists = split_into_sublists(chunks, 5000)
 print(f"Split into {len(chunk_sublists)} sublists.")
 
 def add_to_chroma(chunks: list[Document]):
-    CHROMA_PATH = r"X:\robin\server\app\chroma_db"
+    CHROMA_PATH = os.getenv("CHROMA_PATH")
     # Create a new Chroma database
     db = Chroma(persist_directory=CHROMA_PATH, embedding_function=get_embedding_function())
     for chunks in chunk_sublists:
@@ -55,7 +58,7 @@ def add_to_chroma(chunks: list[Document]):
     db.persist()
 
 add_to_chroma(chunks)
-CHROMA_PATH = r"X:\robin\server\app\chroma_db"
+CHROMA_PATH = os.getenv("CHROMA_PATH")
 db = Chroma(persist_directory=CHROMA_PATH, embedding_function=get_embedding_function())
 print("Database loaded successfully.")
 # Example query to the database

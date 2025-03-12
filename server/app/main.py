@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from langchain_openai import ChatOpenAI
 import os
 from dotenv import load_dotenv
+from query import process_query
 
 load_dotenv()
 
@@ -21,6 +22,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
+
+@app.get("/query")
+def query(request: str):
+    response = process_query(request)
+    return response.json()
 
 #Root Endpoint
 @app.get('/')

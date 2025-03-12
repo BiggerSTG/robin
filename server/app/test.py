@@ -6,11 +6,18 @@ import os
 
 load_dotenv()
 
-CHROMA_PATH = r"X:\robin\server\app\chroma_db"
+query = ""
+
+def process_query(user_query):
+    query = user_query
+
+
+
+CHROMA_PATH = os.getenv("CHROMA_PATH")
 db = Chroma(persist_directory=CHROMA_PATH, embedding_function=get_embedding_function())
 print("Database loaded successfully.")
 # Example query to the database
-results = db.similarity_search("Explain standardized sums in detail with examples with refernce to bernoulli trials?", k=5)
+results = db.similarity_search(query, k=5)
 #print("Results:", results)
 
 PROMPT_TEMPLATE = """
@@ -23,7 +30,7 @@ Answer the question based only on the following context:
 Answer the question based on the above context: {question}
 """
 context_text = "\n\n---\n\n".join([doc.page_content for doc in results])
-final_prompt = PROMPT_TEMPLATE.format(context=context_text, question="Explain standardized sums in detail with examples with refernce to bernoulli trials?")
+final_prompt = PROMPT_TEMPLATE.format(context=context_text, question=query)
 
 client = OpenAI(api_key=os.getenv("DEEPSEEK_API_KEY"), base_url="https://api.deepseek.com")
 response = client.chat.completions.create(
