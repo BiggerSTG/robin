@@ -26,7 +26,6 @@ app.add_middleware(
 @app.get("/query")
 def query(request: str):
     response = process_query(request)
-    print(response)
     return {"response": response}
 
 #Root Endpoint
