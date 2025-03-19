@@ -10,3 +10,4 @@ langchain
 langchain-community
 chromadb
 pytest
+manim
