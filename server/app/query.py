@@ -21,6 +21,10 @@ def process_query(query):
     response = query_llm(final_prompt)
     return response
 
+def fetch_topics(query):
+    #This function is used to fetch the subtopics from the query.
+
+
 
 def rag_retrieval(query):
     # Load the vector-database
