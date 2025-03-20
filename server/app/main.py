@@ -3,6 +3,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from langchain_openai import ChatOpenAI
 import os
+import asyncio
 from dotenv import load_dotenv
 from query import process_query
 
@@ -25,7 +26,7 @@ app.add_middleware(
 
 @app.get("/query")
 def query(request: str):
-    response = process_query(request)
+    response = asyncio.run(process_query(request))
     return {"response": response}
 
 #Root Endpoint
