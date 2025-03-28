@@ -82,6 +82,9 @@ target/
 profile_default/
 ipython_config.py
 
+#media
+media/*
+
 #vector databse
 chroma_db/
 
