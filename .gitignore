@@ -82,6 +82,9 @@ target/
 profile_default/
 ipython_config.py
 
+#vector databse
+chroma_db/
+
 #Credentials
 robin.json
 
