@@ -1,25 +1,74 @@
 import asyncio
 from openai import OpenAI
+import ast
 from dotenv import load_dotenv
 from langchain.vectorstores.chroma import Chroma
 from server.core.get_embedding_function import get_embedding_function
+from server.animation.templates.animate_text import construct_slideshow
+from manim import *
 import os
 from collections import OrderedDict
 
 load_dotenv()
 
 PROMPT_TEMPLATE = """
-You are an expert teacher and educator. You are given a chapter topic and some context.
-Your task is to generate a comprehensive course content that is somewhat ppt friendly and 
-about a few slides long for the given chapter topic using the provided context.
-The course content should be detailed and cover all the important aspects of the topic.
-Use the following context to generate the course content:
+You are an expert educational content creator specializing in Khan Academy-style video lessons. Your task is to create detailed, beginner-friendly PowerPoint content that can be directly converted into instructional videos. The audience has ZERO prior knowledge of the topic.
 
-{context}
+### Pedagogical Requirements
+1. **Lesson Structure**  
+   - Start with foundational concepts, then build complexity
+   - Use concrete examples before abstract theory
+   - Include 1-2 real-world applications per major concept
+   - Add frequent analogies ("This works like...") 
 
----
+2. **Content Guidelines**
+   - Explain concepts as if teaching to a complete novice
+   - Use second-person language ("You'll notice...", "Your first step...")
+   - Include worked examples with step-by-step breakdowns
+   - Anticipate and address common misunderstandings
 
-Generate the course content for the following topic based on the above context: {topic}
+3. **Visual Flow**  
+   - Structure content for screen recording with:
+     - Left side: Visuals/diagrams (describe in parentheses)
+     - Right side: Text explanations
+   - Include callouts for animations/transitions where needed
+     (e.g., "ANIMATE: Reveal equation parts step-by-step")
+
+{tech_specs}
+
+### Task
+Using this context: {context}
+
+Create a video-ready lesson about: {topic}
+
+Output ONLY the Python list of slides - no commentary.
+"""
+
+tech_specs = """
+### Technical Specifications
+- **Slides**: Generate as many slides as needed for complete topic coverage
+- **Math Formatting**:
+  - All equations in LaTeX with double-escaped backslashes
+  - Complex equations split across multiple lines
+  - Align equations using `\\begin{{aligned}}...\\end{{aligned}}`  <!-- Double curly braces escape for literal {}
+- **Content Formatting**:
+  - Use \\textbf{{}} for key terms  <!-- Proper escaping for both LaTeX and Python
+  - Create lists with `\\begin{{itemize}}/\\end{{itemize}}`
+  - Highlight steps with `\\texttt{{\\rightarrow}}` arrows  <!-- Nested escaping
+
+### Example Output
+[
+    {
+        "title": "Understanding Fractions",
+        "content": "Imagine you have (VISUAL: Pizza diagram) a whole pizza. \\\\textbf{Fractions} represent parts of this whole.\\\\par\\\\smallskip Let's break it down: \\\\begin{itemize} \\\\item Numerator: How many slices you have \\\\item Denominator: Total slices in the pizza \\\\end{itemize} ANIMATE: Highlight numerator/denominator sequentially",
+        "math": ""
+    },
+    {
+        "title": "Adding Fractions",
+        "content": "(VISUAL: Side-by-side fraction bars) To add fractions with \\\\textbf{same denominators}: \\\\begin{enumerate} \\\\item Keep denominator unchanged \\\\item Add numerators \\\\end{enumerate} COMMON MISTAKE: Students often add denominators too - remind them this changes the whole!",
+        "math": "\\\\frac{1}{4} + \\\\frac{2}{4} = \\\\frac{1+2}{4} = \\\\frac{3}{4}"
+    }
+]
 """
 
 async def process_query(query):
@@ -50,18 +99,30 @@ def fetch_topics(query):
     PROMPT_TEMPLATE = """
     You are a curriculum design assistant with expertise in education and educational content.
     A user has provided a chapter topic, and your task is to break it down into its core subtopics.
-    For example, if the chapter topic is 'Mensuration' list the main subtopics such as 'Cylinders'; 'Cones'; 'Spheres' etc. Provide a clear, semi-colon separated list of the subtopics that cover the chapter comprehensively.
+    For example, if the chapter topic is 'Mensuration' list the three main subtopics such as 'Cylinders'; 'Cones'; 'Spheres' etc. Provide a clear, semi-colon separated list of three (strictly) subtopics that cover the chapter comprehensively.
     Chapter Topic: {query}
     """
     final_prompt = PROMPT_TEMPLATE.format(query=query)
-    return query_llm(final_prompt)
+    print(f"Prompt for topic extraction: {final_prompt}")
+    return query_llm_topics(final_prompt)
 
 def rag_retrieval(topic):
     CHROMA_PATH = os.getenv("CHROMA_PATH")
     db = Chroma(persist_directory=CHROMA_PATH, embedding_function=get_embedding_function())
     results = db.similarity_search(topic, k=5)
     context_text = "\n\n---\n\n".join([doc.page_content for doc in results])
-    return PROMPT_TEMPLATE.format(context=context_text, topic=topic)
+    print(f"Context for topic '{topic}': {context_text}")
+    return PROMPT_TEMPLATE.format(tech_specs=tech_specs, context=context_text, topic=topic)
+
+def query_llm_topics(prompt):
+    client = OpenAI(api_key=os.getenv("DEEPSEEK_API_KEY"), base_url="https://api.deepseek.com")
+    response = client.chat.completions.create(
+        model="deepseek-reasoner",
+        messages=[{"role": "user", "content": prompt}],
+        stream=False
+    )
+    raw_output = response.choices[0].message.content
+    return raw_output
 
 def query_llm(prompt):
     client = OpenAI(api_key=os.getenv("DEEPSEEK_API_KEY"), base_url="https://api.deepseek.com")
@@ -70,10 +131,26 @@ def query_llm(prompt):
         messages=[{"role": "user", "content": prompt}],
         stream=False
     )
-    return response.choices[0].message.content
+    raw_output = response.choices[0].message.content
+    try:
+        parsed_output = ast.literal_eval(raw_output)
+    except Exception as e:
+        print("Error parsing LLM output:", e)
+        parsed_output = [{"title": "Error", "content": raw_output}]
+    return parsed_output
 
 # Example usage
 if __name__ == "__main__":
-    query = "Your main topic here"
+    query = "Frequency Distribution"
     result = asyncio.run(process_query(query))
+    print("Generated Slides per Subtopic:")
+    for topic, slides in result.items():
+        print(f"Subtopic: {topic}")
+        for slide in slides:
+            print(f"  - {slide['title']}")
+    # For a combined slideshow, flatten all slides into one list
+    combined_slides = []
+    for slides in result.values():
+        combined_slides.extend(slides)
+    construct_slideshow(combined_slides)
     print(result)

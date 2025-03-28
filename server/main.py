@@ -5,7 +5,7 @@ from langchain_openai import ChatOpenAI
 import os
 import asyncio
 from dotenv import load_dotenv
-from services.parallel_query import process_query
+from server.core.parallel_query import process_query
 
 load_dotenv()
 
