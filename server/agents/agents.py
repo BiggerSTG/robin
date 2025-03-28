@@ -2,7 +2,7 @@ from crewai import Agent, Task
 from langchain_openai import ChatOpenAI
 #from sympy import false
 
-from server.app.Agents.tools import MediaTool
+from server.Agents.tools import MediaTool
 import os
 from dotenv import load_dotenv
 

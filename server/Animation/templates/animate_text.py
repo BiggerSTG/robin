@@ -52,4 +52,3 @@ class TextSlideshow(Scene):
             self.play(FadeOut(slide_title), FadeOut(slide_content))
             if slide["math"]:
                 self.play(FadeOut(math_expr))
-
