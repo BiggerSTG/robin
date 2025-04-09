@@ -9,7 +9,7 @@ load_dotenv()
 # Load the environment variables from .env file
 project_id = os.getenv("GOOGLE_PROJECT_ID")
 location = os.getenv("GOOGLE_PROJECT_LOCATION")
-credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_VERTEXAI")
 
 # Load the credentials from the file
 credentials, project = google.auth.load_credentials_from_file(credentials_path)

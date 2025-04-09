@@ -1,4 +1,55 @@
 from manim import *
+from google.cloud import texttospeech
+import os
+from dotenv import load_dotenv
+from mutagen.mp3 import MP3
+
+load_dotenv()
+
+config.media_dir = "./media"  # Explicit media directory
+config.quality = "low_quality"  # For faster testing
+config.format = "mp4"  # Direct video format
+
+# Set up Google Text-to-Speech client
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_TTS")
+
+# Initialize client
+client = texttospeech.TextToSpeechClient()
+
+def get_audio_duration(filename: str) -> float:
+    audio = MP3(filename)
+    return audio.info.length
+
+def speak_and_wait(scene: Scene, text: str, filename: str):
+    # Get absolute path using current config
+    media_dir = config.media_dir
+    audio_dir = os.path.join(media_dir, "audio")
+    os.makedirs(audio_dir, exist_ok=True)
+    print(f"Audio directory: {audio_dir}")
+    full_path = os.path.join(audio_dir, filename)
+
+    if not os.path.exists(filename):
+        text_input = texttospeech.SynthesisInput(text=text)
+        voice = texttospeech.VoiceSelectionParams(
+            language_code="en-US",
+            name="en-US-Chirp3-HD-Aoede",
+        )
+        audio_config = texttospeech.AudioConfig(
+            audio_encoding=texttospeech.AudioEncoding.MP3,
+            speaking_rate=1.0,
+            pitch=0.0
+        )
+        response = client.synthesize_speech(
+            input=text_input,
+            voice=voice,
+            audio_config=audio_config
+        )
+        with open(full_path, "wb") as out:
+            out.write(response.audio_content)
+
+    duration = MP3(full_path).info.length
+    scene.add_sound(full_path, gain=-10)  # -10dB gain for better mixing
+    scene.wait(duration + 0.5)  # Increased buffer
 
 class AnimatedArray(VGroup):
     def __init__(self, values, box_color=BLUE, **kwargs):
@@ -32,22 +83,32 @@ class SelectionSortScene(Scene):
         n = len(values)
         for i in range(n):
             min_idx = i
-            # Highlight the current index
+            speak_and_wait(self, f"Selecting index {i} as the current minimum.", f"audio_step_{i}_select.mp3")
             self.play(*arr.highlight([i], color=GREEN))
+
             for j in range(i + 1, n):
+                speak_and_wait(self, f"Comparing element at index {j} with current minimum.", f"audio_step_{i}_{j}_compare.mp3")
                 self.play(*arr.highlight([j], color=YELLOW))
                 if values[j] < values[min_idx]:
                     min_idx = j
                 self.wait(0.5)
                 self.play(arr.arr[j][0].animate.set_color(WHITE))
+
             if min_idx != i:
+                speak_and_wait(self, f"Swapping index {i} with new minimum at index {min_idx}.", f"audio_step_{i}_swap.mp3")
                 self.play(*arr.swap(i, min_idx))
-                # Swap the values internally as well
                 arr.arr[i], arr.arr[min_idx] = arr.arr[min_idx], arr.arr[i]
                 values[i], values[min_idx] = values[min_idx], values[i]
+
             self.play(arr.arr[i][0].animate.set_color(GREY))
+
         self.wait(2)
 
 if __name__ == "__main__":
-    scene = SelectionSortScene()
-    scene.render()
+    with tempconfig({
+        "media_dir": "./media",
+        "output_file": "selection_sort",
+        "progress_bar": "none"
+    }):
+        scene = SelectionSortScene()
+        scene.render()
