@@ -37,14 +37,12 @@ class MediaTool(BaseTool):
         response = requests.get(url, params=params, headers=headers)
         if response.status_code == 200:
             data = response.json()
-            media_data = []
-            for result in data["data"]:  # Corrected from 'resources' to 'data'
-                title = result.get("title", "No title available")
-                image = result.get("image", "#")
-                media_data.append({"title": title, "image": image})
-            return {"media": media_data}
+            if data["data"]:
+                return data["data"][0].get("image", "")["source"]["url"]
+            else:
+                return "No image found."
         else:
-            return {"Error": "Could not fetch media content."}
+            return "Error fetching media content."
 
 # def wikimedia_auth():
 #     """Authenticate with Wikimedia API."""

@@ -1,22 +1,24 @@
 from crewai import Agent, Task
 from langchain_openai import ChatOpenAI
-#from sympy import false
-
 from server.agents.tools import MediaTool
 import os
 from dotenv import load_dotenv
 
-
 load_dotenv()
 
 
-# Use Ollama with CrewAI
+# Use gpt with CrewAI
+# llm = ChatOpenAI(
+#     api_key=os.getenv("OPENAI_API_KEY"),
+#     model="gpt-4o-mini", 
+#     temperature=0.3
+# )
+
+# Use deepseek with CrewAI
 llm = ChatOpenAI(
     api_key=os.getenv("DEEPSEEK_API_KEY"),
-    model_name="deepseek-reasoner", 
-    base_url="https://api.deepseek.com"
+    model_name="deepseek/deepseek-chat", 
 )
-
 #-------------------------------#
 #-------------------------------#
 ##          Agents
@@ -30,39 +32,46 @@ llm = ChatOpenAI(
 # Initialize the Media tool
 media_tool = MediaTool()
 
+
 media_agent = Agent(
-    role="Educational Media Expert",
-    goal="Fetch important educational media content based on the provided query.",
-    backstory="Provides accurate and relevant educational media content for enhancing presentations and learning materials.",
+    role="Educational Image Query Generator",
+    goal="Generate 3 extremely concise search queries (each max 4 words) based on the given slide content for educational images.",
+    backstory="Specializes in creating effective, ultra-short image search queries for academic presentations.",
     llm=llm,
-    tools=[media_tool],
-    allow_delegation=False
+    llm_kwargs={
+        "headers": {
+            "Authorization": f"Bearer {os.getenv('OPENAI_API_KEY')}",
+            "Content-Type": "application/json"
+        }
+    },
+    tools=[MediaTool()],
+    allow_delegation=False,
+    verbose=True,
+    max_iter=3
 )
 
+    
 media_task = Task(
-    description="Retrieve educational media content for the following topic: {topic}.",
-    expected_output="A list of educational media content including titles and download URLs for the specified topic.",
-    agent=media_agent
-)
+    description="""Analyze this slide content and generate 3 concise image search queries.
+    Each query should be at most 4 words and on a separate line. Try keeping the queries as short as possible, preferably 2 words
+    but increase or decrease between min 1 to max 4 words as and when necessary. Never cross the word limit.
+    Consider:
+    1. Key visual elements
+    2. Abstract concept representation
+    3. Educational context
 
-#-------------------------------#
-## Generator Agent
-#-------------------------------#
+    Example: If the slide is Cell division takes place for multiplication of cells and creation of new cells IMAGE
+    Output: 
+    mitosis process
+    cell division
+    cell cycle
 
-gen_agent = Agent(
-    role="Itinerary Generator Expert",
-    goal="""
-    Generate a comprehensive travel itinerary by merging data from weather, maps, hotels, and contextual tips.
-            """,
-    backstory="""
-    Synthesizes live data and retrieved insights to produce a tailored last-minute trip plan.
+    Slide Content: {topic}""",
+
+    expected_output="""Three separate lines; each line is a search query (max 4 words).
+    mitosis process
+    cell division
+    cell cycle
     """,
-    llm=llm,
-    allow_delegation=False
-)
-
-gen_task = Task(
-    description=("Combine the following data into a final itinerary: weather: {weather}, map info: {map}."),
-    expected_output="A final itinerary that integrates all the components into a coherent travel plan.",
-    agent=gen_agent
+    agent=media_agent
 )
