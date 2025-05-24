@@ -84,6 +84,7 @@ ipython_config.py
 
 #media
 media/*
+images/*
 
 #vector databse
 chroma_db/
