@@ -87,7 +87,7 @@ media/*
 images/*
 
 #PDFs
-PDFs/*
+*/PDFs/*
 
 #vector databse
 chroma_db/
