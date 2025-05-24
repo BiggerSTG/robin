@@ -20,7 +20,7 @@ def get_audio_duration(filename: str) -> float:
     audio = MP3(filename)
     return audio.info.length
 
-def speak_and_wait(scene: Scene, text: str, filename: str):
+def speak_and_wait(text: str, filename: str):
     # Get absolute path using current config
     media_dir = config.media_dir
     audio_dir = os.path.join(media_dir, "audio")
@@ -48,8 +48,8 @@ def speak_and_wait(scene: Scene, text: str, filename: str):
             out.write(response.audio_content)
 
     duration = MP3(full_path).info.length
-    scene.add_sound(full_path, gain=-10)  # -10dB gain for better mixing
-    scene.wait(duration + 0.5)  # Increased buffer
+    # scene.add_sound(full_path, gain=-10)  # -10dB gain for better mixing
+    # scene.wait(duration + 0.5)  # Increased buffer
 
 class AnimatedArray(VGroup):
     def __init__(self, values, box_color=BLUE, **kwargs):
@@ -104,11 +104,37 @@ class SelectionSortScene(Scene):
 
         self.wait(2)
 
+def sanitize_latex(text):
+    # Escape common problematic symbols
+    replacements = {
+        '%': r'\%',
+        '&': r'\&',
+        '_': r'\_',
+        '#': r'\#',
+        '$': r'\$',
+        '{': r'\{',
+        '}': r'\}',
+    }
+    for symbol, escaped in replacements.items():
+        text = text.replace(symbol, escaped)
+    return text
+
+
 if __name__ == "__main__":
-    with tempconfig({
-        "media_dir": "./media",
-        "output_file": "selection_sort",
-        "progress_bar": "none"
-    }):
-        scene = SelectionSortScene()
-        scene.render()
+
+    result = "∑ from n = 1 to ∞ of n"
+
+    #result = sanitize_latex(result)
+    result = Text(result, font_size=36).scale(0.8)
+
+    print(result)
+
+    speak_and_wait(text="magya", filename="magya.mp3")
+
+    # with tempconfig({
+    #     "media_dir": "./media",
+    #     "output_file": "selection_sort",
+    #     "progress_bar": "none"
+    # }):
+    #     scene = SelectionSortScene()
+    #     scene.render()

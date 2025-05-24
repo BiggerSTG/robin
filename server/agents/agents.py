@@ -6,14 +6,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
-# Use gpt with CrewAI
-# llm = ChatOpenAI(
-#     api_key=os.getenv("OPENAI_API_KEY"),
-#     model="gpt-4o-mini", 
-#     temperature=0.3
-# )
-
 # Use deepseek with CrewAI
 llm = ChatOpenAI(
     api_key=os.getenv("DEEPSEEK_API_KEY"),
@@ -38,13 +30,7 @@ media_agent = Agent(
     goal="Generate 3 extremely concise search queries (each max 4 words) based on the given slide content for educational images.",
     backstory="Specializes in creating effective, ultra-short image search queries for academic presentations.",
     llm=llm,
-    llm_kwargs={
-        "headers": {
-            "Authorization": f"Bearer {os.getenv('OPENAI_API_KEY')}",
-            "Content-Type": "application/json"
-        }
-    },
-    tools=[MediaTool()],
+    tools=[media_tool],
     allow_delegation=False,
     verbose=True,
     max_iter=3

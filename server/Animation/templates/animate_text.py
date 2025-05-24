@@ -5,90 +5,74 @@ import requests
 import os
 import urllib.parse
 
-
 class TextSlideshow(Scene):
     def __init__(self, slides, **kwargs):
         super().__init__(**kwargs)
         self.slides = slides
         self.media_tool = MediaTool()
 
-
     def construct(self):
         num_slides = len(self.slides)
         time_per_slide = min(10, 600 / num_slides)  # Auto-adjust time per slide
-        error_count = 0
-        error_free = 0
-        url_pattern = re.compile(r'https?://[^\s,:]+')
 
         for i, slide in enumerate(self.slides):
-            # Create slide title with a maximum width to avoid overflow
-            print("Data type for slide: ", type(slide))  # Check what type slide is
+            print("Data type for slide: ", type(slide))
             print("Slide data:", slide)
-            slide_title = Text(f"{slide['title']}", font_size=48)
-            if slide_title.width > config.frame_width - 1:
-                slide_title.scale_to_fit_width(config.frame_width - 1)
+
+            # --- Title Setup ---
+            slide_title = Text(slide['title'], font_size=48)
+            slide_title.scale_to_fit_width(config.frame_width - 1)
             slide_title.to_edge(UP)
 
-            image_url = None
-            if url_pattern.search(slide["content"]):
-                image_url = url_pattern.findall(slide["content"])[0]  # Extract first URL
-                slide["content"] = url_pattern.sub("", slide["content"]).strip()  # Remove URL from text
-
-
-            # Create slide content text
+            # --- Content Setup ---
             try:
-                slide_content = Tex(slide["content"], font_size=36).scale(0.8)
-                if slide_content.width > config.frame_width - 1:
-                    slide_content.scale_to_fit_width(config.frame_width - 1)
-                error_free += 1
-                print(error_free)
+                slide_content = MarkupText(slide["content"], font_size=36)
+                slide_content.scale_to_fit_width(config.frame_width - 1)
             except Exception as e:
-                print("Tex compilation failed for slide content. Using plain text instead:", e)
-                error_count += 1
-                print(error_count)
+                print("MarkupText failed, using plain Text:", e)
                 slide_content = Text(slide["content"], font_size=36)
-                if slide_content.width > config.frame_width - 1:
-                    slide_content.scale_to_fit_width(config.frame_width - 1)
+                slide_content.scale_to_fit_width(config.frame_width - 1)
+
             slide_content.next_to(slide_title, DOWN)
 
-            # Animate title and content
-            self.play(FadeIn(slide_title), FadeIn(slide_content), run_time=1)
+            # --- Animate Text In ---
+            self.play(Write(slide_title), Write(slide_content), run_time=1.2)
 
-            # Add image if a URL is detected
-            image_path = download_image(image_url)
-
-            # Load image from local path
-            try:
-                image_mobject = ImageMobject(image_path).scale(0.5)
-                image_mobject.next_to(slide_content, DOWN, buff=0.5)
-                self.play(FadeIn(image_mobject), run_time=1)
-            except Exception as e:
-                print(f"Fucking path {image_path} got bummed: ", e)
-
-
-
-            # Animate mathematical expression if present
+            # --- Math Expression ---
             math_expr = None
             if "math" in slide and slide["math"]:
                 try:
-                    math_expr = MathTex(slide["math"], font_size=40).scale(0.9).next_to(slide_content, DOWN)
+                    math_expr = MathTex(slide["math"], font_size=40).scale(0.9).next_to(slide_content, DOWN, buff=0.5)
                     self.play(Write(math_expr), run_time=2)
-                    error_free += 1
-                    print(error_free)
                 except Exception as e:
-                    print("MathTex compilation failed for math expression. Using plain text instead:", e)
-                    math_expr = Text(slide["math"], font_size=40).next_to(slide_content, DOWN)
+                    print("MathTex failed, fallback:", e)
+                    math_expr = Text(slide["math"], font_size=40).next_to(slide_content, DOWN, buff=0.5)
                     self.play(FadeIn(math_expr), run_time=2)
-                    error_count += 1
-                    print(error_count)
 
+            # --- Image Handling ---
+            image_mobject = None
+            if "image" in slide and slide["image"]:
+                image_url = slide["image"]
+                image_path = download_image(image_url)
+                try:
+                    image_mobject = ImageMobject(image_path).scale(0.5)
+                    image_mobject.next_to(math_expr or slide_content, DOWN, buff=0.5)
+                    self.play(FadeIn(image_mobject, shift=UP, scale=0.9), run_time=1)
+                except Exception as e:
+                    print(f"Image failed to render: {image_path} | Error: {e}")
+
+            # --- Wait Duration ---
             self.wait(time_per_slide - 2)
 
-            # Fade out slide elements
-            self.play(FadeOut(slide_title), FadeOut(slide_content))
-            if "math" in slide and slide["math"]:
-                self.play(FadeOut(math_expr))
+            # --- Exit Everything Together ---
+            fade_outs = [slide_title, slide_content]
+            if image_mobject:
+                fade_outs.append(image_mobject)
+            if math_expr:
+                fade_outs.append(math_expr)
 
+            self.play(LaggedStart(*[FadeOut(mob) for mob in fade_outs], lag_ratio=0.1, run_time=1))
+            self.clear()
 
  # image download
 def download_image(image_url):
@@ -117,6 +101,6 @@ def download_image(image_url):
         print("Failed to load image:", e)
 
 def construct_slideshow(slides):
-    with tempconfig({"output_file": "text_slideshow_output"}):
+    with tempconfig({"output_file": "new_video", "disable_caching": True}):
         scene = TextSlideshow(slides)
         scene.render()

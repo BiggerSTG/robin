@@ -61,4 +61,4 @@ def select_best_image(context):
     # print(url_list[int(raw_output)])
     return url_list[int(raw_output)]
 
-# select_best_image("Cell division takes place for multiplication of cells and creation of new cells IMAGE")
+#select_best_image("Cell division takes place for multiplication of cells and creation of new cells IMAGE")

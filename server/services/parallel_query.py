@@ -13,73 +13,62 @@ from crewai import Crew
 from server.agents.agents import media_agent, media_task
 from server.agents.tools import MediaTool
 from server.agents.test_kickoff import select_best_image
+import re
 
 
 load_dotenv()
 
+num_slides = 5  # Default number of slides
+
 PROMPT_TEMPLATE = """
 You are an expert educational content creator specializing in Khan Academy-style video lessons. Your task is to create detailed, beginner-friendly 
 PowerPoint content that can be directly converted into instructional videos. The main content is already provided and 
-you have to built your course structure around it The audience has ZERO prior knowledge of the topic.
+you have to build your course structure around it. The audience has ZERO prior knowledge of the topic.
 
 ### Pedagogical Requirements
 1. **Lesson Structure**  
    - Include 1-2 real-world applications per major concept
-   - Add frequent analogies ("This works like...") 
+   - Add frequent analogies ("This works like...")
 
 2. **Content Guidelines**
-   - Explain concepts based on the level mentioned in query example High-School level, graduate level, etc
-   - If no level is mentioned go with the best suitable approach as of the context passed for your use
+   - Explain concepts based on the level mentioned in query (e.g., high-school, graduate). If not specified, choose the most appropriate based on context.
    - Use second-person language ("You'll notice...", "Your first step...")
    - Anticipate and address common misunderstandings
 
 3. **Visual Flow**  
-   - Structure content for screen recording with:
-     - Left side: Visuals/diagrams (describe in parentheses)
-     - Right side: Text explanations
-   - Include callouts for animations/transitions where needed
-     (e.g., "ANIMATE: Reveal equation parts step-by-step")
-   - Where ever you would find suitable to have an image included just mention in plane english all caps IMAGE follow this convention extremely strictly
-   - You strictly must not use any reference such as (IMAGE) or VISUALS or VISUALS: description of visual etc, only include the placeholder IMAGE that is it and nothing else or nothing surrounding it
-Use the context provided to the best of your capabilities. The context is the actual knowledge base and educationals content, 
-your role is to provide the required format. So strictly adhere to the instructions. Where ever you find it suitabel to include animage just mention 
-in plane english all caps IMAGE, strictly.
-{tech_specs}
+   - Structure each slide as a JSON object with the following keys:
+     - `"title"`: Slide heading
+     - `"content"`: Plain English explanation. If emphasis is needed, use Markdown-like formatting (e.g., `**important**`) that can be parsed later.
+     - `"math"`: Valid LaTeX string (double-escaped) for formulas. Leave empty if no math.
+     - `"image"`: Set to the image description if an image should be shown; else leave as empty string `""`
+   - **You must generate exactly {num_slides} slides**, dividing the material logically and evenly across them.
+   - Do **NOT** embed "(IMAGE)" or "(VISUAL)" inside `"content"` — use the dedicated `"image"` key instead.
+   - Indicate animations inline in the `"content"` using the word `"ANIMATE"` as a callout where appropriate.
+   - Keep all mathematical expressions in the `"math"` field only.
+   - Do not include `\textbf`, `\frac`, or any LaTeX syntax in `"content"`.
+
+Use the context provided to the best of your capabilities. The context is the actual knowledge base and educational content.
+Your role is to provide the required format. So, strictly adhere to the instructions.
 
 ### Task
 Using this context: {context}
 
 Create a video-ready lesson about: {topic}
 
-Output ONLY the Python list of slides - no commentary.
+### Output Format (Strict)
+{tech_specs}
 """
 
 tech_specs = """
-### Technical Specifications
-- **Slides**: Generate as many slides as needed for complete topic coverage
-- **Math Formatting**:
-  - All equations in LaTeX with double-escaped backslashes
-  - Complex equations split across multiple lines
-  - Align equations using `\\begin{{aligned}}...\\end{{aligned}}`  <!-- Double curly braces escape for literal {}
-- **Content Formatting**:
-  - Use \\textbf{{}} for key terms  <!-- Proper escaping for both LaTeX and Python
-  - Create lists with `\\begin{{itemize}}/\\end{{itemize}}`
-  - Highlight steps with `\\texttt{{\\rightarrow}}` arrows  <!-- Nested escaping
-
-### Example Output
-[
-    {
-        "title": "Understanding Fractions",
-        "content": "Imagine you have (IMAGE) a whole pizza. \\\\textbf{Fractions} represent parts of this whole.\\\\par\\\\smallskip Let's break it down: \\\\begin{itemize} \\\\item Numerator: How many slices you have \\\\item Denominator: Total slices in the pizza \\\\end{itemize} ANIMATE: Highlight numerator/denominator sequentially",
-        "math": ""
-    },
-    {
-        "title": "Adding Fractions",
-        "content": "(VISUAL: Side-by-side fraction bars) To add fractions with \\\\textbf{same denominators}: \\\\begin{enumerate} \\\\item Keep denominator unchanged \\\\item Add numerators \\\\end{enumerate} COMMON MISTAKE: Students often add denominators too - remind them this changes the whole!",
-        "math": "\\\\frac{1}{4} + \\\\frac{2}{4} = \\\\frac{1+2}{4} = \\\\frac{3}{4}"
-    }
-]
+Return only a valid Python list of slide dictionaries:
+{
+    "title": "Slide Title",
+    "content": "Explanation of the slide content. Use plain English and Markdown-like formatting for emphasis strictly using one of **bold**, *italic*, __underline__, and/or `teletype` (for code or other similar stuff).",
+    "math": "Any LaTeX formula like \\\\frac{{a}}{{b}}. Use \\\\begin{{aligned}} for multi-line.",
+    "image": "A description of the image"  # Only if an image should be shown; else use ""
+}
 """
+
 
 async def process_query(query):
     topics = fetch_topics(query)
@@ -109,9 +98,10 @@ def fetch_topics(query):
     PROMPT_TEMPLATE = """
     You are a curriculum design assistant with expertise in education and educational content.
     A user has provided a chapter topic, and your task is to break it down into its core subtopics.
-    For example, if the chapter topic is 'Mensuration' list the three main subtopics such as 'Cylinders'; 
-    'Cones'; 'Spheres' etc. Provide a clear, semi-colon separated list of three (strictly) subtopics that 
-    cover the chapter comprehensively. Chapter Topic: {query}
+    For example, if the chapter topic is 'Mensuration' list the two main subtopics such as 'Cylinders'; 
+    'Cones' etc. Provide a clear, semi-colon separated list of two (strictly) subtopics that 
+    cover the chapter comprehensively. DO NOT over specify using brackets. Only include the sub topics in a semicolon separated list.
+    Chapter Topic: {query}
     """
     final_prompt = PROMPT_TEMPLATE.format(query=query)
     print(f"Prompt for topic extraction: {final_prompt}")
@@ -123,17 +113,14 @@ def rag_retrieval(topic):
     results = db.similarity_search(topic, k=5)
     context_text = "\n\n---\n\n".join([doc.page_content for doc in results])
     print(f"Context for topic '{topic}': {context_text}")
-    return PROMPT_TEMPLATE.format(tech_specs=tech_specs, context=context_text, topic=topic)
+    return PROMPT_TEMPLATE.format(tech_specs=tech_specs, context=context_text, topic=topic, num_slides=num_slides)
 
+def set_num_slides(new_num_slides):
+    num_slides = new_num_slides
 
 def slide_generator(prompt):
-    client = OpenAI(api_key=os.getenv("DEEPSEEK_API_KEY"), base_url="https://api.deepseek.com")
-    response = client.chat.completions.create(
-        model="deepseek-reasoner",
-        messages=[{"role": "user", "content": prompt}],
-        stream=False
-    )
-    raw_output = response.choices[0].message.content
+    raw_output = query_llm(prompt)
+
     try:
         parsed_output = ast.literal_eval(raw_output)
     except Exception as e:
@@ -141,75 +128,51 @@ def slide_generator(prompt):
         parsed_output = [{"title": "Error", "content": raw_output}]
     return parsed_output
 
+def markdown_to_markuptext(text):
+    text = re.sub(r"\*\*(.*?)\*\*", r"<b>\1</b>", text)
+    text = re.sub(r"\*(.*?)\*", r"<i>\1</i>", text)
+    text = re.sub(r"__(.*?)__", r"<u>\1</u>", text)
+    text = re.sub(r"`(.*?)`", r"<tt>\1</tt>", text)
+    text = re.sub(r"&", r"&amp;", text)
+    return text
+
 
 # Example usage
 if __name__ == "__main__":
+    
     query = "Frequency Distribution"
+    
     result = asyncio.run(process_query(query))
+
+    # For a combined slideshow, flatten all slides into one list
+    combined_slides = []
+    
     print("Generated Slides per Subtopic:")
+    
     for topic, slides in result.items():
         print(f"Subtopic: {topic}")
         for slide in slides:
             print(f"  - {slide['title']}")
-    # For a combined slideshow, flatten all slides into one list
-    combined_slides = []
-    # for slides in result.values():
-    """ operation to pass slides to an agent that would generate the most relevant 
-    max 3 worded query to fetch image url from mediatool, and then move on to
-    the next step """
+            combined_slides.append(slide)
     
-    # Get the image urls for the slide
-    for slide in slides:
+    # Preprocess the slides for animation
+    for slide in combined_slides:
         # print(slide)
         content = slide.get('content', '')
 
-        print(content)
+        # Convert Markdown-like formatting to Markup
+        content = markdown_to_markuptext(content)
+        slide['content'] = content
 
         # Get the best image URL
         content = slide.get('content')
-        if content and ("IMAGE" in content or "VISUAL" in content):
-            image_url = select_best_image(slide)
-            print(image_url)
-
-            # Download image from URL if the 
-
-            
+        image = slide.get('image')
+        if image:
+            image_url = select_best_image(image)
 
             # Replace placeholders with the selected image URL
-            slide['content'] = content.replace("IMAGE", image_url).replace("(IMAGE)", image_url).replace("VISUAL", image_url)
-            print(slide)
+            slide['image'] = image_url
 
-        combined_slides.extend(slides)
+    print("Combined Slides", combined_slides)
 
     construct_slideshow(combined_slides)
-
-    # slide = slides[0]
-
-    # Debugging: Print slide content
-    # print(slide)
-    # content = slide.get('content', '')
-
-    # print(content)
-
-    # # Get the best image URL
-    # image_url = select_best_image(slide)
-    # print(image_url)
-
-    # # Replace placeholders with the selected image URL
-    # if content:
-    #     slide['content'] = content.replace("IMAGE", image_url).replace("(IMAGE)", image_url).replace("VISUAL", image_url)
-    #     print(slide)
-
-    # combined_slides.append(slide)
-    # print("Combined Slides", combined_slides)
-    # construct_slideshow(combined_slides)
-    # print(result)
-
-
-# # Create a Crew to execute the task
-# crew = Crew(
-#     agents=[media_agent],
-#     tasks=[media_task],
-#     process="sequential",
-#     verbose=True
-# )
