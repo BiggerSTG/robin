@@ -86,6 +86,9 @@ ipython_config.py
 media/*
 images/*
 
+#PDFs
+PDFs/*
+
 #vector databse
 chroma_db/
 
