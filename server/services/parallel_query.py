@@ -1,6 +1,6 @@
 import asyncio
 from openai import OpenAI
-import ast
+import json
 from dotenv import load_dotenv
 from langchain.vectorstores.chroma import Chroma
 from server.services.query_llm import query_llm
@@ -12,9 +12,9 @@ from collections import OrderedDict
 from crewai import Crew
 from server.agents.agents import media_agent, media_task
 from server.agents.tools import MediaTool
+from server.services.narrator import generate_narration
 from server.agents.test_kickoff import select_best_image
 import re
-
 
 load_dotenv()
 
@@ -67,6 +67,7 @@ Return only a valid Python list of slide dictionaries:
     "math": "Any LaTeX formula like \\\\frac{{a}}{{b}}. Use \\\\begin{{aligned}} for multi-line.",
     "image": "A description of the image"  # Only if an image should be shown; else use ""
 }
+DO NOT include any other text or formatting outside this structure.
 """
 
 
@@ -122,10 +123,12 @@ def slide_generator(prompt):
     raw_output = query_llm(prompt)
 
     try:
-        parsed_output = ast.literal_eval(raw_output)
+        cleaned = clean_llm_json(raw_output)
+        parsed_output = json.loads(cleaned)
     except Exception as e:
         print("Error parsing LLM output:", e)
         parsed_output = [{"title": "Error", "content": raw_output}]
+        print(f"Raw output: {raw_output}")
     return parsed_output
 
 def markdown_to_markuptext(text):
@@ -136,6 +139,16 @@ def markdown_to_markuptext(text):
     text = re.sub(r"&", r"&amp;", text)
     return text
 
+def clean_llm_json(raw_output):
+    # Remove leading/trailing whitespace and code block markers
+    cleaned = raw_output.strip()
+
+    # Remove code block fence if present (```python or ```json or ```)
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:python|json)?", "", cleaned, flags=re.IGNORECASE).strip()
+        cleaned = re.sub(r"```$", "", cleaned).strip()
+
+    return cleaned
 
 # Example usage
 if __name__ == "__main__":
@@ -155,6 +168,9 @@ if __name__ == "__main__":
             print(f"  - {slide['title']}")
             combined_slides.append(slide)
     
+    #new prompt for each slide generate audio content
+    generate_narration(combined_slides)
+
     # Preprocess the slides for animation
     for slide in combined_slides:
         # print(slide)

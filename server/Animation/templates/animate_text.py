@@ -4,12 +4,16 @@ import re
 import requests
 import os
 import urllib.parse
+from mutagen.mp3 import MP3
+
+audio_dir = "./media/audio"
 
 class TextSlideshow(Scene):
-    def __init__(self, slides, **kwargs):
+    def __init__(self, slides, audio_buffer=1.5, **kwargs):
         super().__init__(**kwargs)
         self.slides = slides
         self.media_tool = MediaTool()
+        self.audio_buffer = audio_buffer
 
     def construct(self):
         num_slides = len(self.slides)
@@ -60,9 +64,24 @@ class TextSlideshow(Scene):
                     self.play(FadeIn(image_mobject, shift=UP, scale=0.9), run_time=1)
                 except Exception as e:
                     print(f"Image failed to render: {image_path} | Error: {e}")
+            
+            # --- Generate audio narration for the slide ---
+            audio_file = os.path.join(audio_dir, f"slide_{i + 1}_audio.mp3")
+            wait_duration = time_per_slide - 2 # fallback if no audio
+
+            if os.path.exists(audio_file):
+                try:
+                    audio = MP3(audio_file)
+                    audio_duration = audio.info.length
+                    wait_duration = audio_duration + self.audio_buffer
+                    self.add_sound(audio_file, gain=-10)
+                except Exception as e:
+                    print(f"Failed to get duration or play audio {audio_file}: {e}")
+            else:
+                print(f"Audio file {audio_file} does not exist, skipping audio playback.")
 
             # --- Wait Duration ---
-            self.wait(time_per_slide - 2)
+            self.wait(wait_duration)
 
             # --- Exit Everything Together ---
             fade_outs = [slide_title, slide_content]
