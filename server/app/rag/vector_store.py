@@ -3,7 +3,7 @@ from langchain.document_loaders import PyPDFDirectoryLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain.schema.document import Document
 from langchain.vectorstores.chroma import Chroma
-from app.rag.get_embedding_function import get_embedding_function
+from server.app.rag.embeddings import get_embedding_function
 from pathlib import Path
 from dotenv import load_dotenv
 

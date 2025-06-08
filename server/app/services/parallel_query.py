@@ -3,7 +3,7 @@ import json
 from dotenv import load_dotenv
 from langchain.vectorstores.chroma import Chroma
 from app.services.query_llm import query_llm
-from server.app.rag.get_embedding_function import get_embedding_function
+from server.app.rag.embeddings import get_embedding_function
 from app.animation.templates.animate_text import construct_slideshow
 from manim import *
 import os
