@@ -1,6 +1,6 @@
 from crewai import Agent, Task
 from langchain_openai import ChatOpenAI
-from server.agents.tools import MediaTool
+from app.agents.tools import MediaTool
 import os
 from dotenv import load_dotenv
 

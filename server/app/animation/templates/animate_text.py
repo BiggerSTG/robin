@@ -1,5 +1,5 @@
 from manim import *
-from server.agents.tools import MediaTool
+from app.agents.tools import MediaTool
 import re
 import requests
 import os
