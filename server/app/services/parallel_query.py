@@ -1,5 +1,4 @@
 import asyncio
-from openai import OpenAI
 import json
 from dotenv import load_dotenv
 from langchain.vectorstores.chroma import Chroma
@@ -9,9 +8,6 @@ from app.animation.templates.animate_text import construct_slideshow
 from manim import *
 import os
 from collections import OrderedDict
-from crewai import Crew
-from app.agents.agents import media_agent, media_task
-from app.agents.tools import MediaTool
 from app.services.narrator import generate_narration
 from app.agents.test_kickoff import select_best_image
 import re
