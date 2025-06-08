@@ -1,0 +1,13 @@
+crewai==0.102.0
+fastapi==0.115.11
+langchain_openai==0.3.7
+python-dotenv==1.0.1
+Requests==2.32.3
+sympy==1.13.3
+uvicorn==0.34.0
+pypdf
+langchain
+langchain-community
+chromadb
+pytest
+manim
