@@ -1,6 +1,6 @@
 from crewai.tools import BaseTool
 import requests
-from typing import Any, Dict, List
+from typing import Any, Dict
 from dotenv import load_dotenv
 import os
 

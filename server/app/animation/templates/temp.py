@@ -1,5 +1,4 @@
 from manim import *
-import numpy as np
 import sympy as sp
 
 class GeneralFunctionPlot(Scene):

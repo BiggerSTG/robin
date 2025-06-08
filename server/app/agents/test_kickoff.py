@@ -1,8 +1,6 @@
 from crewai import Crew
 from app.agents.agents import media_agent, media_task
 from app.agents.tools import MediaTool
-from openai import OpenAI
-import os
 from app.services.query_llm import query_llm
 
 
