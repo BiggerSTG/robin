@@ -46,6 +46,7 @@ Robin is an innovative, AI-driven e-learning platform that automatically generat
 
 Robin follows a **feature-first architecture** designed for scalability, maintainability, and clear separation of concerns. Each major feature is organized into its own module with a consistent structure.
 
+```
 server/
 ├── app/ # Main application code
 │ ├── auth/ # Authentication & authorization
@@ -88,3 +89,4 @@ server/
 ├── tests/ # Test suite
 ├── requirements.txt # Python dependencies
 └── README.md # Project documentation
+```
