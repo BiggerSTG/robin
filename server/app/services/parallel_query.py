@@ -9,7 +9,7 @@ from manim import *
 import os
 from collections import OrderedDict
 from app.services.narrator import generate_narration
-from app.agents.test_kickoff import select_best_image
+from server.test.test_kickoff import select_best_image
 import re
 
 load_dotenv()
