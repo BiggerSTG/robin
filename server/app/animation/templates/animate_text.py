@@ -1,6 +1,5 @@
 from manim import *
-from server.agents.tools import MediaTool
-import re
+from app.agents.tools import MediaTool
 import requests
 import os
 import urllib.parse

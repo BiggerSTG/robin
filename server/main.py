@@ -1,11 +1,10 @@
-from crewai import Crew
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from langchain_openai import ChatOpenAI
+from server.app.services import services_routes
+from server.app.auth import auth_routes
 import os
-import asyncio
 from dotenv import load_dotenv
-from server.services.parallel_query import process_query
+from app.services.parallel_query import process_query
 
 load_dotenv()
 
@@ -24,15 +23,16 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-@app.get("/query")
-def query(request: str):
-    response = asyncio.run(process_query(request))
-    return {"response": response}
 
 #Root Endpoint
 @app.get('/')
 def root():
     return {"message": "Fast API is running"}
+
+
+#API routes
+app.include_router(services_routes.router, prefix="/api/content", tags=["API"])
+app.include_router(auth_routes.router, prefix="api/auth", tags=["Auth"])
 
 
 if __name__ == '__main__':

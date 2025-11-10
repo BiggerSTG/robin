@@ -1,9 +1,7 @@
 from crewai import Crew
-from server.agents.agents import media_agent, media_task
-from server.agents.tools import MediaTool
-from openai import OpenAI
-import os
-from server.services.query_llm import query_llm
+from app.agents.agents import media_agent, media_task
+from app.agents.tools import MediaTool
+from app.services.query_llm import query_llm
 
 
 crew = Crew(

@@ -1,19 +1,15 @@
 import asyncio
-from openai import OpenAI
 import json
 from dotenv import load_dotenv
 from langchain.vectorstores.chroma import Chroma
-from server.services.query_llm import query_llm
-from server.core.get_embedding_function import get_embedding_function
-from server.animation.templates.animate_text import construct_slideshow
+from app.services.query_llm import query_llm
+from server.app.rag.embeddings import get_embedding_function
+from app.animation.templates.animate_text import construct_slideshow
 from manim import *
 import os
 from collections import OrderedDict
-from crewai import Crew
-from server.agents.agents import media_agent, media_task
-from server.agents.tools import MediaTool
-from server.services.narrator import generate_narration
-from server.agents.test_kickoff import select_best_image
+from app.services.narrator import generate_narration
+from server.test.test_kickoff import select_best_image
 import re
 
 load_dotenv()

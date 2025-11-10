@@ -4,7 +4,7 @@ import json
 import re
 from dotenv import load_dotenv
 from mutagen.mp3 import MP3
-from server.services.query_llm import query_llm
+from app.services.query_llm import query_llm
 
 load_dotenv()
 
